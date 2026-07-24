@@ -52,7 +52,9 @@ export function encodeBook(cards: readonly BookCard[], aceCards: readonly string
       const pos = stream.findIndex((e) => e.name === name);
       if (pos < 0) throw new Error(`Aカード対象がブックにない: ${name}`);
       if (pos % 4 !== 0) {
-        throw new Error(`Aカード対象 ${name} の位置${pos}が4の倍数でない（既知の参照形式では表現不可）`);
+        // 参照形式は未完成: 観測済みの「参照値×4=位置」に当てはまらないケースは
+        // 本ライブラリ側の理解不足のため安全側でエラーにしている（形式の制約ではない）
+        throw new Error(`Aカード対象 ${name} の位置${pos}は参照形式が未解読（本ライブラリ未対応）`);
       }
       value |= BigInt(pos / 4) << BigInt(6 * i);
     });
