@@ -143,7 +143,7 @@ type Histogram = Partial<Record<1 | 2 | 3 | 4, readonly [number, number]>>;
 
 - **真ID** = バイト値 + 0x100 ×（ID列のページ1部にいるか）。ページ境界はヘッダーが与える
 - カード総数 398 枚 > 256 のため 1 バイトでは足りず、同じバイト値が別カードを指す**衝突**がある
-- 詳細な仕様は元リポジトリの `book_code_format.md`、解読の経緯は `analysis_journal.md` を参照
+- **バイナリ仕様の詳細（ビット文法・実例つき）は [SPEC.md](SPEC.md) を参照**
 
 ## 既知の制限
 
