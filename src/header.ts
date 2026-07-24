@@ -128,15 +128,20 @@ export function parseHeader(data: Uint8Array): { histogram: Histogram; length: n
     throw new Error("ヘッダー先頭ビットが1でない");
   }
   const bits = bitsOf(data, 10);
+  // 短い解釈が長い解釈の接頭辞になりうるので、マッチする中で最長（最も特定的）を選ぶ
+  let best: { histogram: Histogram; length: number } | null = null;
   for (const withN3 of [false, true]) {
     for (const markerPresent of [true, false]) {
       const hist = parseBranch(bits, withN3, markerPresent);
       if (hist === null) continue;
       const enc = encodeHeader(hist);
       if (bytesEqual(data.slice(0, enc.length), enc)) {
-        return { histogram: hist, length: enc.length };
+        if (best === null || enc.length > best.length) {
+          best = { histogram: hist, length: enc.length };
+        }
       }
     }
   }
+  if (best !== null) return best;
   throw new Error("ヘッダー解釈失敗");
 }
