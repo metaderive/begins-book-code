@@ -1,7 +1,7 @@
 {
   "name": "culdcept-book-code",
   "version": "0.1.0",
-  "description": "culdcept.club ブックコードのデコーダ/エンコーダ（リバースエンジニアリングによる非公式実装）",
+  "description": "『カルドセプト ビギンズ』ブック共有コードのデコーダ/エンコーダ（非公式・リバースエンジニアリング実装）",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
