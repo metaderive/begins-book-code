@@ -2,14 +2,15 @@
  * ページ0 = 真ID < 256、ページ1 = 真ID >= 256 のカード。 */
 export type Histogram = Partial<Record<1 | 2 | 3 | 4, readonly [number, number]>>;
 
-export interface Mark {
+/** A（エース）カードの指定。1 ブックにつき A1〜A3 の 3 スロットまで。 */
+export interface AceCard {
   /** A1〜A3 のスロット番号（1始まり） */
   slot: number;
   /** ID列上の位置（参照値×4） */
   position: number;
-  /** マーク対象カードのバイトID（位置がID列内のとき） */
+  /** 対象カードのバイトID（位置がID列内のとき） */
   cardId?: number;
-  /** マーク対象カード名（判明しているとき） */
+  /** 対象カード名（判明しているとき） */
   cardName?: string;
 }
 
@@ -29,8 +30,10 @@ export interface DecodedBook {
     bytes: Uint8Array;
     histogram: Histogram;
   };
-  markByte: number;
-  marks: Mark[];
+  /** Aカード数バイト（下位7bit = 指定数。0x80フラグの意味は未解明） */
+  aceCardByte: number;
+  /** Aカードの指定（A1〜A3） */
+  aceCards: AceCard[];
   /** ID列（コード内の並び順のまま） */
   cards: CardEntry[];
 }

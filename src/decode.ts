@@ -1,10 +1,10 @@
 import { codeToBytes } from "./alphabet.js";
 import { cardName } from "./cards.js";
 import { parseHeader } from "./header.js";
-import type { DecodedBook, Mark } from "./types.js";
+import type { AceCard, DecodedBook } from "./types.js";
 
-/** マーク数バイト → データ長（経験則。0x80フラグはスロット関連とみられ未解明） */
-const MARK_DATA_LEN: ReadonlyMap<number, number> = new Map([
+/** Aカード数バイト → データ長（経験則。0x80フラグはスロット関連とみられ未解明） */
+const ACE_DATA_LEN: ReadonlyMap<number, number> = new Map([
   [0x00, 0],
   [0x01, 1],
   [0x02, 2],
@@ -12,30 +12,30 @@ const MARK_DATA_LEN: ReadonlyMap<number, number> = new Map([
   [0x81, 1],
 ]);
 
-/** マークデータ = LEビット列に6bit参照をA1..An順で格納。参照×4 = ID列上の位置。 */
-function parseMarks(
-  markData: Uint8Array,
+/** Aカードデータ = LEビット列に6bit参照をA1..An順で格納。参照×4 = ID列上の位置。 */
+function parseAceCards(
+  data: Uint8Array,
   count: number,
   cards: DecodedBook["cards"],
-): Mark[] {
-  if (count === 0 || markData.length === 0) return [];
+): AceCard[] {
+  if (count === 0 || data.length === 0) return [];
   let value = 0n;
-  for (let i = markData.length - 1; i >= 0; i--) {
-    value = (value << 8n) | BigInt(markData[i]!);
+  for (let i = data.length - 1; i >= 0; i--) {
+    value = (value << 8n) | BigInt(data[i]!);
   }
-  const marks: Mark[] = [];
+  const aces: AceCard[] = [];
   for (let i = 0; i < count; i++) {
     const ref = Number((value >> BigInt(6 * i)) & 0x3fn);
     const position = ref * 4;
     const target = cards[position];
-    marks.push({
+    aces.push({
       slot: i + 1,
       position,
       cardId: target?.id,
       cardName: target?.name,
     });
   }
-  return marks;
+  return aces;
 }
 
 /** ブックコードをデコードする。 */
@@ -44,15 +44,15 @@ export function decode(code: string): DecodedBook {
   const { histogram, length } = parseHeader(data);
   const rest = data.slice(length);
   if (rest.length === 0) {
-    throw new Error("マークフィールドがない");
+    throw new Error("Aカードフィールドがない");
   }
-  const markByte = rest[0]!;
-  const markCount = markByte & 0x7f;
-  const dataLen = MARK_DATA_LEN.get(markByte);
+  const aceCardByte = rest[0]!;
+  const aceCount = aceCardByte & 0x7f;
+  const dataLen = ACE_DATA_LEN.get(aceCardByte);
   if (dataLen === undefined) {
-    throw new Error(`未解析のマークバイト: 0x${markByte.toString(16)}`);
+    throw new Error(`未解析のAカードバイト: 0x${aceCardByte.toString(16)}`);
   }
-  const markData = rest.slice(1, 1 + dataLen);
+  const aceData = rest.slice(1, 1 + dataLen);
   const ids = rest.slice(1 + dataLen);
 
   // ID列 = [ページ0][ページ1] の2部構成。境界 = ヘッダーのページ0種類数合計
@@ -69,8 +69,8 @@ export function decode(code: string): DecodedBook {
 
   return {
     header: { bytes: data.slice(0, length), histogram },
-    markByte,
-    marks: parseMarks(markData, markCount, cards),
+    aceCardByte,
+    aceCards: parseAceCards(aceData, aceCount, cards),
     cards,
   };
 }

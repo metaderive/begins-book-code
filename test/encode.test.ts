@@ -37,7 +37,7 @@ describe("encodeBook", () => {
     expect(hex(encodeBook(cards))).toBe(hex("4AFx QCAA Gg&H AxkA DBY? Gj#="));
   });
 
-  it("エンコード→デコードの往復が一致する（マーク付き）", () => {
+  it("エンコード→デコードの往復が一致する（Aカード付き）", () => {
     const cards = [
       ...["ゴブリン", "ウルフ", "ファイター", "ボージェス"].map((name) => ({ name, count: 3 })),
       ...["ジャイアントラット", "スタチュー", "バルダンダース", "ゾンビ",
@@ -46,6 +46,6 @@ describe("encodeBook", () => {
     const code = encodeBook(cards, ["ゴブリン", "ジャイアントラット"]);
     const book = decode(code);
     expect(book.cards).toHaveLength(11);
-    expect(book.marks.map((m) => m.cardName)).toEqual(["ゴブリン", "ジャイアントラット"]);
+    expect(book.aceCards.map((a) => a.cardName)).toEqual(["ゴブリン", "ジャイアントラット"]);
   });
 });

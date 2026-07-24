@@ -10,10 +10,10 @@ export interface BookCard {
 
 /**
  * ブック定義からコードを生成する。
- * cards: 合計40枚・枚数1〜4。marks: マーク対象カード名（A1,A2,A3の順、最大3つ）。
+ * cards: 合計40枚・枚数1〜4。aceCards: A（エース）カードのカード名（A1,A2,A3の順、最大3つ）。
  * 並びは正準形（枚数クラス昇順 → グループ内はページ0→ページ1、各カタログ順）で出力する。
  */
-export function encodeBook(cards: readonly BookCard[], marks: readonly string[] = []): string {
+export function encodeBook(cards: readonly BookCard[], aceCards: readonly string[] = []): string {
   const total = cards.reduce((s, c) => s + c.count, 0);
   if (total !== 40) {
     throw new Error(`合計枚数 ${total} ≠ 40`);
@@ -44,25 +44,25 @@ export function encodeBook(cards: readonly BookCard[], marks: readonly string[] 
     }
   }
 
-  if (marks.length > 3) throw new Error("マークは3つまで");
-  const markBytes: number[] = [marks.length];
-  if (marks.length > 0) {
+  if (aceCards.length > 3) throw new Error("Aカードは3つまで");
+  const aceBytes: number[] = [aceCards.length];
+  if (aceCards.length > 0) {
     let value = 0n;
-    marks.forEach((name, i) => {
+    aceCards.forEach((name, i) => {
       const pos = stream.findIndex((e) => e.name === name);
-      if (pos < 0) throw new Error(`マーク対象がブックにない: ${name}`);
+      if (pos < 0) throw new Error(`Aカード対象がブックにない: ${name}`);
       if (pos % 4 !== 0) {
-        throw new Error(`マーク対象 ${name} の位置${pos}が4の倍数でない（既知の参照形式では表現不可）`);
+        throw new Error(`Aカード対象 ${name} の位置${pos}が4の倍数でない（既知の参照形式では表現不可）`);
       }
       value |= BigInt(pos / 4) << BigInt(6 * i);
     });
-    const len = marks.length === 1 ? 1 : 2;
+    const len = aceCards.length === 1 ? 1 : 2;
     for (let i = 0; i < len; i++) {
-      markBytes.push(Number((value >> BigInt(8 * i)) & 0xffn));
+      aceBytes.push(Number((value >> BigInt(8 * i)) & 0xffn));
     }
   }
 
   return bytesToCode(
-    Uint8Array.from([...header, ...markBytes, ...stream.map((e) => e.id)]),
+    Uint8Array.from([...header, ...aceBytes, ...stream.map((e) => e.id)]),
   );
 }

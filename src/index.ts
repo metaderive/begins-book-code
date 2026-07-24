@@ -6,4 +6,4 @@ export type { CardInfo } from "./carddb.js";
 export { decode } from "./decode.js";
 export { encodeBook } from "./encode.js";
 export type { BookCard } from "./encode.js";
-export type { Histogram, Mark, CardEntry, DecodedBook } from "./types.js";
+export type { Histogram, AceCard, CardEntry, DecodedBook } from "./types.js";

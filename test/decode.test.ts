@@ -13,7 +13,7 @@ describe("decode", () => {
   it("S1: 無属性10種×4枚ブック", () => {
     const book = decode("wJBA EAAH AxkA DBY? AgpM");
     expect(book.header.histogram).toEqual({ 4: [9, 1] });
-    expect(book.markByte).toBe(0);
+    expect(book.aceCardByte).toBe(0);
     expect(book.cards).toHaveLength(10);
     expect(book.cards[0]?.name).toBe("ゴブリン");
     expect(book.cards.map((c) => c.id)).toEqual([
@@ -21,12 +21,12 @@ describe("decode", () => {
     ]);
   });
 
-  it("S17: マーク2個（ゴブリン=A1, ファイター=A2）", () => {
+  it("S17: Aカード2枚（ゴブリン=A1, ファイター=A2）", () => {
     const book = decode(
       "oCUg AwJH AQMF GhUP ER8g BBwn ?DU+ LR4S EAkT GQAM Fg4C CgsH Gw#G Fx#U AT@M TVM=",
     );
     expect(book.cards).toHaveLength(40);
-    expect(book.marks).toEqual([
+    expect(book.aceCards).toEqual([
       expect.objectContaining({ slot: 1, position: 28, cardName: "ゴブリン" }),
       expect.objectContaining({ slot: 2, position: 20, cardName: "ファイター" }),
     ]);

@@ -4,7 +4,7 @@
 非公式 TypeScript ライブラリ。フォーマットは 26 個のサンプルブックの差分解析で
 リバースエンジニアリングして実装した。
 
-**本ライブラリのエンコーダで生成したコード（枚数混在・マーク付きを含む）を実機が正しく
+**本ライブラリのエンコーダで生成したコード（枚数混在・Aカード付きを含む）を実機が正しく
 復元することを往復テストで確認済み**（検証環境は下記）。
 
 協力: culdcept.club
@@ -51,7 +51,7 @@ import { decode } from "culdcept-book-code";
 const book = decode("wJBA EAAH AxkA DBY? AgpM");
 
 book.header.histogram;        // { 4: [9, 1] } … ×4枚がページ0に9種＋ページ1に1種
-book.markByte;                // 0（マークなし）
+book.aceCardByte;                // 0（Aカードなし）
 book.cards.map((c) => c.name);
 // ["ゴブリン", "ウルフ", "ファイター", "ジャイアントラット", "スタチュー",
 //  "バルダンダース", "ゾンビ", "アンバーモス", "シーフ", "ジャイアントスパイダー"]
@@ -70,7 +70,7 @@ const code = encodeBook(
 // => "wJBA EAAH AxkA DBY? AgpM"（実サンプルと同一バイト列）
 ```
 
-### マーク（A カード）付きのエンコード
+### A（エース）カード付きのエンコード
 
 ```ts
 const code = encodeBook(
@@ -91,8 +91,8 @@ const code = encodeBook(
 ```ts
 interface DecodedBook {
   header: { bytes: Uint8Array; histogram: Histogram };
-  markByte: number;      // マーク数（下位7bit）
-  marks: Mark[];         // A カードのスロット・対象
+  aceCardByte: number;      // Aカード数（下位7bit）
+  aceCards: AceCard[];         // Aカードのスロット・対象
   cards: CardEntry[];    // ID列（コード内の並び順のまま）
 }
 
@@ -103,7 +103,7 @@ interface CardEntry {
   name: string;          // カード名。未確定は候補列挙、不明は "?"
 }
 
-interface Mark {
+interface AceCard {
   slot: number;          // A1〜A3（1始まり）
   position: number;      // ID列上の位置（参照値×4）
   cardId?: number;
@@ -114,11 +114,11 @@ interface Mark {
 type Histogram = Partial<Record<1 | 2 | 3 | 4, readonly [number, number]>>;
 ```
 
-### `encodeBook(cards, marks?): string`
+### `encodeBook(cards, aceCards?): string`
 ブック定義からコードを生成する。
 
 - `cards: { name: string; count: number }[]` — 合計 40 枚・各カード 1〜4 枚
-- `marks?: string[]` — マーク対象のカード名（A1, A2, A3 の順・最大 3）
+- `aceCards?: string[]` — Aカード対象のカード名（A1, A2, A3 の順・最大 3）
 - 並びは正準形（枚数クラス昇順 → 各クラス内はページ0→ページ1、各カタログ順）で出力
 
 ### 低レベル API
@@ -138,8 +138,8 @@ type Histogram = Partial<Record<1 | 2 | 3 | 4, readonly [number, number]>>;
 
 ```
 [ヘッダー 2〜6B]      ページ別（真ID<256 / ≥256）× 枚数クラス別の種類数をビット詰め
-[マーク数 1B]         A カードの個数
-[マークデータ 0〜2B]   A1〜A3 スロットの6bit参照をリトルエンディアンのビット列で格納
+[Aカード数 1B]         Aカードの個数
+[Aカードデータ 0〜2B]   A1〜A3 スロットの6bit参照をリトルエンディアンのビット列で格納
 [カードID 1B × 種類数] 真IDの下位1バイト。ID列は[ページ0][ページ1]の2部構成
 ```
 
@@ -156,8 +156,8 @@ type Histogram = Partial<Record<1 | 2 | 3 | 4, readonly [number, number]>>;
 - 同一ページ内ではバイト値とカードは 1 対 1 に対応する（真 ID = ページ + バイト値が一意なため、
   ページ判定できれば曖昧さはない）。デコード結果に「A or B」の候補表示が残るのは、
   ID 表の未確定部分（収穫実験で集合までしか絞れていない値）によるもので、形式上の制約ではない
-- サイト上ではどのカードにもマークを付けられるが、既知の参照形式（6bit 参照値 × 4 = 位置）で
-  表現できるのは「ID 列上の位置が 4 の倍数」のカードのマークのみ。非整列位置のマークを含む
+- サイト上ではどのカードも A（エース）カードに指定できるが、既知の参照形式（6bit 参照値 × 4 =
+  位置）で表現できるのは「ID 列上の位置が 4 の倍数」のカードの指定のみ。非整列位置の指定を含む
   コードは実在する（旧世代サンプル）が形式が未解読のため、本ライブラリでは扱えない
   （エンコード時はエラーになる）
 - 対応はビギンズ・Ver 1.0.3 の範囲。サイト仕様変更で無効になる可能性あり
