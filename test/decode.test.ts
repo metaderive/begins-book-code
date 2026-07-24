@@ -1,5 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { bytesToCode, codeToBytes, decode, encodeHeader } from "../src/index.js";
+import { bytesToCode, codeToBytes, decode, encodeHeader, parseHeader } from "../src/index.js";
+
+describe("parseHeader round-trip", () => {
+  // 実ヘッダー＋以前失敗した端ケース（薄い散らばり・×3のみ×4なし・全クラス両ページ）
+  const cases: Array<Record<number, [number, number]>> = [
+    { 4: [9, 1] }, { 2: [19, 1] }, { 1: [37, 3] },
+    { 1: [6, 0], 2: [3, 0], 3: [4, 0], 4: [4, 0] },
+    { 1: [1, 0], 2: [1, 0], 3: [1, 0], 4: [1, 0] },
+    { 1: [1, 1], 2: [1, 0], 3: [1, 0] },
+    { 1: [1, 1], 2: [1, 1], 3: [1, 1], 4: [1, 1] },
+  ];
+  it("エンコード→パースが往復する", () => {
+    for (const hist of cases) {
+      const enc = encodeHeader(hist as never);
+      const withTail = new Uint8Array([...enc, 0, 1, 2, 3]);
+      const { histogram, length } = parseHeader(withTail);
+      expect(length).toBe(enc.length);
+      expect(histogram).toEqual(hist);
+    }
+  });
+});
 
 describe("alphabet", () => {
   it("コード⇄バイトの往復が一致する", () => {

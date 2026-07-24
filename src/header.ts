@@ -62,7 +62,7 @@ function bitsOf(data: Uint8Array, upTo: number): string {
   return s + "0".repeat(64);
 }
 
-function parseBranch(bits: string, withN3: boolean): Histogram | null {
+function parseBranch(bits: string, withN3: boolean, markerPresent: boolean): Histogram | null {
   const f4 = bits[1] === "1";
   const f1 = bits[2] === "1";
   const n2p0 = parseInt(bits.slice(3, 8), 2);
@@ -84,24 +84,29 @@ function parseBranch(bits: string, withN3: boolean): Histogram | null {
     if (n3p0 === 0) return null;
   }
   pos += (8 - (pos % 8)) % 8;
-  const m4 = bits[pos + 1] === "1";
-  const m1 = bits[pos + 2] === "1";
-  const n2p1 = parseInt(bits.slice(pos + 3, pos + 8), 2);
-  pos += 8;
   let n1p1 = 0;
   let n4p1 = 0;
   let n3p1 = 0;
-  if (m1) {
-    n1p1 = parseInt(bits.slice(pos, pos + 8), 2);
+  let n2p1 = 0;
+  // マーカーバイトは page1 全ゼロだと encodeHeader で切り詰められる → 「無し」仮説も試す
+  if (markerPresent) {
+    if (pos + 8 > bits.length || bits[pos] !== "0") return null;
+    const m4 = bits[pos + 1] === "1";
+    const m1 = bits[pos + 2] === "1";
+    n2p1 = parseInt(bits.slice(pos + 3, pos + 8), 2);
     pos += 8;
-  }
-  if (m4) {
-    n4p1 = parseInt(bits.slice(pos, pos + 4), 2);
-    pos += 4;
-  }
-  if (n3p0 > 0) {
-    n3p1 = parseInt(bits.slice(pos, pos + 4), 2);
-    pos += 4;
+    if (m1) {
+      n1p1 = parseInt(bits.slice(pos, pos + 8), 2);
+      pos += 8;
+    }
+    if (m4) {
+      n4p1 = parseInt(bits.slice(pos, pos + 4), 2);
+      pos += 4;
+    }
+    if (withN3) {
+      n3p1 = parseInt(bits.slice(pos, pos + 4), 2);
+      pos += 4;
+    }
   }
   const hist: Histogram = {};
   if (n1p0 + n1p1 > 0) hist[1] = [n1p0, n1p1];
@@ -115,19 +120,22 @@ function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);
 }
 
-/** コード先頭からヘッダーを解釈する。
- * ×3フィールドとマーカーバイトの曖昧性は再エンコード一致で分岐選択する。 */
+/** コード先頭からヘッダーを解釈する。全構造仮説（×3有無・マーカー切り詰め有無）を
+ * 試し、再エンコードが入力と一致するものを選ぶ。
+ * 既知の限界: ×3/×4が「page1のみ（page0=0）」の構成は復元不能（存在フラグが無いため）。 */
 export function parseHeader(data: Uint8Array): { histogram: Histogram; length: number } {
   if (data.length === 0 || (data[0]! & 0x80) === 0) {
     throw new Error("ヘッダー先頭ビットが1でない");
   }
   const bits = bitsOf(data, 10);
   for (const withN3 of [false, true]) {
-    const hist = parseBranch(bits, withN3);
-    if (hist === null) continue;
-    const enc = encodeHeader(hist);
-    if (bytesEqual(data.slice(0, enc.length), enc)) {
-      return { histogram: hist, length: enc.length };
+    for (const markerPresent of [true, false]) {
+      const hist = parseBranch(bits, withN3, markerPresent);
+      if (hist === null) continue;
+      const enc = encodeHeader(hist);
+      if (bytesEqual(data.slice(0, enc.length), enc)) {
+        return { histogram: hist, length: enc.length };
+      }
     }
   }
   throw new Error("ヘッダー解釈失敗");
