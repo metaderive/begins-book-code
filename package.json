@@ -13,19 +13,36 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "SPEC.md",
+    "LICENSE"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build && npm test"
   },
   "keywords": [
     "culdcept",
+    "カルドセプト",
     "deck-code",
-    "card-game"
+    "card-game",
+    "reverse-engineering"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/metaderive/begins-book-code.git"
+  },
+  "bugs": {
+    "url": "https://github.com/metaderive/begins-book-code/issues"
+  },
+  "homepage": "https://github.com/metaderive/begins-book-code#readme",
   "devDependencies": {
     "typescript": "^5.5.0",
     "vitest": "^2.0.0"
