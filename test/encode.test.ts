@@ -68,13 +68,26 @@ describe("encodeBook", () => {
       "クラーケン", "ワイバーン", "コロッサス",
       "ドレインマジック", "キングバラン", // ページ1
     ].map((name) => ({ name, count: 4 }));
-    const code = encodeBook(cards, ["ゴブリン", "ドレインマジック", "キングバラン"]);
+    // 指定順は逆でも、実機同様に ID列の出現順（ページ0→ページ1、各index順）へ正規化される。
+    // このデッキの並びでは page1 は キングバラン → ドレインマジック の順になる。
+    const code = encodeBook(cards, ["ドレインマジック", "キングバラン", "ゴブリン"]);
     const book = decode(code);
     expect(book.aceCards).toEqual([
       expect.objectContaining({ slot: 1, page: 0, cardName: "ゴブリン" }),
-      expect.objectContaining({ slot: 2, page: 1, cardName: "ドレインマジック" }),
-      expect.objectContaining({ slot: 3, page: 1, cardName: "キングバラン" }),
+      expect.objectContaining({ slot: 2, page: 1, cardName: "キングバラン" }),
+      expect.objectContaining({ slot: 3, page: 1, cardName: "ドレインマジック" }),
     ]);
+  });
+
+  it("Aカードの指定順はコードに影響しない（実機同様、位置順に正規化される）", () => {
+    const cards = [
+      "ゴブリン", "ウルフ", "ゾンビ", "サラマンダー", "フェニックス",
+      "クラーケン", "ワイバーン", "コロッサス",
+      "ドレインマジック", "キングバラン",
+    ].map((name) => ({ name, count: 4 }));
+    const a = encodeBook(cards, ["ゴブリン", "ドレインマジック", "キングバラン"]);
+    const b = encodeBook(cards, ["キングバラン", "ドレインマジック", "ゴブリン"]);
+    expect(b).toBe(a); // 指定順が違っても同一コード
   });
 });
 

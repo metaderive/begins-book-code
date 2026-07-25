@@ -51,15 +51,22 @@ export function encodeBook(cards: readonly BookCard[], aceCards: readonly string
     aceBytes = [0x00];
   } else {
     // Aカードフィールド（LEビット列）: count(2bit) + ページフラグ(bit2+i) +
-    // ページ内インデックス(6bit, bit6+6i)。参照は「同ページのID列で何番目か」。
+    // ページ内インデックス(6bit, bit6+6i)。
+    // 実機はエースをID列の出現順（ページ0→ページ1、各ページ内index順）に並べ直して格納する
+    // （A1/A2/A3は"何番目に出るエースか"で決まり、指定順は正規化される）。実機出力とバイト
+    // 一致させるため、位置順にソートしてから詰める。
     const nPage0 = stream.filter((e) => !e.page1).length;
-    let value = BigInt(aceCards.length & 0x03);
-    aceCards.forEach((name, i) => {
+    const positions = aceCards.map((name) => {
       const pos = stream.findIndex((e) => e.name === name);
       if (pos < 0) throw new Error(`Aカード対象がブックにない: ${name}`);
+      return pos;
+    });
+    positions.sort((a, b) => a - b);
+    let value = BigInt(aceCards.length & 0x03);
+    positions.forEach((pos, i) => {
       const page1 = pos >= nPage0;
       const idx = page1 ? pos - nPage0 : pos;
-      if (idx > 0x3f) throw new Error(`Aカード対象 ${name} のページ内位置${idx}が6bitを超える`);
+      if (idx > 0x3f) throw new Error(`Aカードのページ内位置${idx}が6bitを超える`);
       value |= BigInt(page1 ? 1 : 0) << BigInt(2 + i);
       value |= BigInt(idx) << BigInt(6 + 6 * i);
     });
