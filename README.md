@@ -7,7 +7,7 @@
 - ESM / TypeScript 型定義同梱
 - ブラウザ・Node.js の両方で動作（標準の `atob`/`btoa` 相当を使わず自前実装）
 
-協力: culdcept.club ／ 解読の経緯は [docs/DECODING.md](docs/DECODING.md)
+カード名・データの参照元: culdcept.club（有志のカードDB。本プロジェクトとは無関係） ／ 解読の経緯は [docs/DECODING.md](docs/DECODING.md)
 
 > ⚠️ **無保証・自己責任でご利用ください。** 本ライブラリは公式仕様のない**非公式のリバースエンジニアリング**
 > であり、フォーマットには未解明の部分が残っています。生成コードが実機で読めることを一部のケースで確認しては
