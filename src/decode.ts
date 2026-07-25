@@ -3,33 +3,37 @@ import { cardName } from "./cards.js";
 import { parseHeader } from "./header.js";
 import type { AceCard, DecodedBook } from "./types.js";
 
-/** Aカード数バイト → データ長（経験則。0x80フラグはスロット関連とみられ未解明） */
-const ACE_DATA_LEN: ReadonlyMap<number, number> = new Map([
-  [0x00, 0],
-  [0x01, 1],
-  [0x02, 2],
-  [0x03, 2],
-  [0x81, 1],
-]);
+/** Aカードフィールドの総バイト長（先頭バイト含む）。count = フィールド先頭2ビット。 */
+const ACE_FIELD_LEN: Readonly<Record<number, number>> = { 0: 1, 1: 2, 2: 3, 3: 3 };
 
-/** Aカードデータ = LEビット列に6bit参照をA1..An順で格納。参照×4 = ID列上の位置。 */
+/**
+ * Aカードフィールド（先頭を含むLEビット列）を解釈する。
+ *   bit0-1   : count（Aカード数）
+ *   bit2/3/4 : A1/A2/A3 のページフラグ（0=ページ0, 1=ページ1）
+ *   bit6+6i  : Ai のページ内インデックス（同ページのID列で何番目か, 6bit）
+ * 対象カード = そのページの ID 列で idx 番目（ページ1なら nPage0 + idx）。
+ */
 function parseAceCards(
-  data: Uint8Array,
+  field: Uint8Array,
   count: number,
   cards: DecodedBook["cards"],
+  nPage0: number,
 ): AceCard[] {
-  if (count === 0 || data.length === 0) return [];
+  if (count === 0) return [];
   let value = 0n;
-  for (let i = data.length - 1; i >= 0; i--) {
-    value = (value << 8n) | BigInt(data[i]!);
+  for (let i = field.length - 1; i >= 0; i--) {
+    value = (value << 8n) | BigInt(field[i]!);
   }
   const aces: AceCard[] = [];
   for (let i = 0; i < count; i++) {
-    const ref = Number((value >> BigInt(6 * i)) & 0x3fn);
-    const position = ref * 4;
+    const page = Number((value >> BigInt(2 + i)) & 1n) as 0 | 1;
+    const pageIndex = Number((value >> BigInt(6 + 6 * i)) & 0x3fn);
+    const position = page === 1 ? nPage0 + pageIndex : pageIndex;
     const target = cards[position];
     aces.push({
       slot: i + 1,
+      page,
+      pageIndex,
       position,
       cardId: target?.id,
       cardName: target?.name,
@@ -47,13 +51,10 @@ export function decode(code: string): DecodedBook {
     throw new Error("Aカードフィールドがない");
   }
   const aceCardByte = rest[0]!;
-  const aceCount = aceCardByte & 0x7f;
-  const dataLen = ACE_DATA_LEN.get(aceCardByte);
-  if (dataLen === undefined) {
-    throw new Error(`未解析のAカードバイト: 0x${aceCardByte.toString(16)}`);
-  }
-  const aceData = rest.slice(1, 1 + dataLen);
-  const ids = rest.slice(1 + dataLen);
+  const aceCount = aceCardByte & 0x03;
+  const aceLen = ACE_FIELD_LEN[aceCount]!;
+  const aceField = rest.slice(0, aceLen);
+  const ids = rest.slice(aceLen);
 
   // ID列 = [ページ0][ページ1] の2部構成。境界 = ヘッダーのページ0種類数合計
   const nPage0 = Object.values(histogram).reduce((s, pair) => s + (pair?.[0] ?? 0), 0);
@@ -70,7 +71,7 @@ export function decode(code: string): DecodedBook {
   return {
     header: { bytes: data.slice(0, length), histogram },
     aceCardByte,
-    aceCards: parseAceCards(aceData, aceCount, cards),
+    aceCards: parseAceCards(aceField, aceCount, cards, nPage0),
     cards,
   };
 }

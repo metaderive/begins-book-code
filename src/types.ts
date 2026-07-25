@@ -6,7 +6,11 @@ export type Histogram = Partial<Record<1 | 2 | 3 | 4, readonly [number, number]>
 export interface AceCard {
   /** A1〜A3 のスロット番号（1始まり） */
   slot: number;
-  /** ID列上の位置（参照値×4） */
+  /** 対象カードのページ（0 = ページ0, 1 = ページ1） */
+  page: 0 | 1;
+  /** 対象カードの「ページ内インデックス」（同ページのID列で何番目か） */
+  pageIndex: number;
+  /** ID列上の通し位置（ページ1なら nPage0 + pageIndex） */
   position: number;
   /** 対象カードのバイトID（位置がID列内のとき） */
   cardId?: number;
@@ -30,7 +34,8 @@ export interface DecodedBook {
     bytes: Uint8Array;
     histogram: Histogram;
   };
-  /** Aカード数バイト（下位7bit = 指定数。0x80フラグの意味は未解明） */
+  /** Aカードフィールドの先頭バイト（下位2bit = Aカード数。上位ビットはページフラグ／
+   *  インデックスの一部で、独立フラグではない。詳細は SPEC §4 と aceCards を参照） */
   aceCardByte: number;
   /** Aカードの指定（A1〜A3） */
   aceCards: AceCard[];

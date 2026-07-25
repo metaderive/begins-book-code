@@ -87,6 +87,34 @@ describe("ページ境界（0xff↔0x100）", () => {
   });
 });
 
+describe("Aカード参照（ページ内インデックス形式）", () => {
+  // すべて実機（Switch 2）で単独/複数Aカードを付けてエクスポートした10種×4ブック。
+  // ID列 = ウルフ,ゴブリン,キングトータス,ゼラチンウォール,ブラッドプリン,オーロラ(page0)
+  //        | キングバラン,ファイアーシフト,ファインド,ドレインマジック(page1)
+  it("page0のカード1枚（ゴブリン=ページ0の1番目）", () => {
+    const book = decode("wGBA QEEA AwdL T1X4 U38i Gg==");
+    expect(book.aceCards).toEqual([
+      expect.objectContaining({ slot: 1, page: 0, pageIndex: 1, cardName: "ゴブリン" }),
+    ]);
+  });
+
+  it("page1のカード1枚（ドレインマジック=ページ1の3番目）＝旧×4では表現不能だった", () => {
+    const book = decode("wGBA QMUA AwdL T1X4 U38i Gg==");
+    expect(book.aceCards).toEqual([
+      expect.objectContaining({ slot: 1, page: 1, pageIndex: 3, cardName: "ドレインマジック" }),
+    ]);
+  });
+
+  it("ページ跨ぎ3枚（A1=ゴブリンp0 / A2=ドレインマジックp1 / A3=キングバランp1）", () => {
+    const book = decode("wGBA QFsw AAMH S#9V +FN/ &ho=");
+    expect(book.aceCards).toEqual([
+      expect.objectContaining({ slot: 1, page: 0, pageIndex: 1, cardName: "ゴブリン" }),
+      expect.objectContaining({ slot: 2, page: 1, pageIndex: 3, cardName: "ドレインマジック" }),
+      expect.objectContaining({ slot: 3, page: 1, pageIndex: 0, cardName: "キングバラン" }),
+    ]);
+  });
+});
+
 describe("encodeHeader", () => {
   it("既知ヘッダーを再現する", () => {
     const cases: Array<[Record<number, [number, number]>, string]> = [

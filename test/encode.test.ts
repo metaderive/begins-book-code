@@ -61,6 +61,21 @@ describe("encodeBook", () => {
     expect(book.cards).toHaveLength(11);
     expect(book.aceCards.map((a) => a.cardName)).toEqual(["ゴブリン", "ジャイアントラット"]);
   });
+
+  it("ページ0/ページ1をまたぐAカードが往復する（旧×4実装では不可能だった）", () => {
+    const cards = [
+      "ゴブリン", "ウルフ", "ゾンビ", "サラマンダー", "フェニックス",
+      "クラーケン", "ワイバーン", "コロッサス",
+      "ドレインマジック", "キングバラン", // ページ1
+    ].map((name) => ({ name, count: 4 }));
+    const code = encodeBook(cards, ["ゴブリン", "ドレインマジック", "キングバラン"]);
+    const book = decode(code);
+    expect(book.aceCards).toEqual([
+      expect.objectContaining({ slot: 1, page: 0, cardName: "ゴブリン" }),
+      expect.objectContaining({ slot: 2, page: 1, cardName: "ドレインマジック" }),
+      expect.objectContaining({ slot: 3, page: 1, cardName: "キングバラン" }),
+    ]);
+  });
 });
 
 describe("正準化：登録順を吸収する", () => {

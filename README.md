@@ -102,7 +102,9 @@ interface CardEntry {
 
 interface AceCard {
   slot: number;          // A1〜A3（1始まり）
-  position: number;      // ID列上の位置（参照値×4）
+  page: 0 | 1;           // 対象カードのページ
+  pageIndex: number;     // 同ページのID列で何番目か
+  position: number;      // ID列上の通し位置（page1なら nPage0 + pageIndex）
   cardId?: number;
   cardName?: string;
 }
@@ -151,9 +153,8 @@ type Histogram = Partial<Record<1 | 2 | 3 | 4, readonly [number, number]>>;
 - エンコーダは正準形（カタログ順）で出力するため、実機が出力する編集履歴依存の並びとは
   文字列が一致しないことがある（デッキ内容としては等価。`encode(decode(code))` で同一の正準コードに収束する）
 - 同一ページ内ではバイト値とカードは 1 対 1（真 ID = ページ + バイト値が一意）
-- A（エース）カードの参照形式は未完成。実機ではどのカードも A カードに指定できるが、
-  本ライブラリが再現できるのは観測済みの `参照値 × 4 = 位置` に当てはまるケースのみ
-  （`SPEC.md` §4 参照）。当てはまらない指定はエンコード時に安全側でエラーにしている
+- A（エース）カードの参照形式は解明済み（`(ページ, ページ内インデックス)` 形式・`SPEC.md` §4）。
+  ページ0/ページ1どちらの任意カードも A カードに指定でき、往復エンコードできる
 - 対応はビギンズ・Ver 1.0.3 の範囲。ゲームのアップデートで無効になる可能性あり
 
 ## 開発

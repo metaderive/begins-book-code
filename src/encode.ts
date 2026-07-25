@@ -45,20 +45,25 @@ export function encodeBook(cards: readonly BookCard[], aceCards: readonly string
   }
 
   if (aceCards.length > 3) throw new Error("Aカードは3つまで");
-  const aceBytes: number[] = [aceCards.length];
-  if (aceCards.length > 0) {
-    let value = 0n;
+  let aceBytes: number[];
+  if (aceCards.length === 0) {
+    aceBytes = [0x00];
+  } else {
+    // Aカードフィールド（LEビット列）: count(2bit) + ページフラグ(bit2+i) +
+    // ページ内インデックス(6bit, bit6+6i)。参照は「同ページのID列で何番目か」。
+    const nPage0 = stream.filter((e) => !e.page1).length;
+    let value = BigInt(aceCards.length & 0x03);
     aceCards.forEach((name, i) => {
       const pos = stream.findIndex((e) => e.name === name);
       if (pos < 0) throw new Error(`Aカード対象がブックにない: ${name}`);
-      if (pos % 4 !== 0) {
-        // 参照形式は未完成: 観測済みの「参照値×4=位置」に当てはまらないケースは
-        // 本ライブラリ側の理解不足のため安全側でエラーにしている（形式の制約ではない）
-        throw new Error(`Aカード対象 ${name} の位置${pos}は参照形式が未解読（本ライブラリ未対応）`);
-      }
-      value |= BigInt(pos / 4) << BigInt(6 * i);
+      const page1 = pos >= nPage0;
+      const idx = page1 ? pos - nPage0 : pos;
+      if (idx > 0x3f) throw new Error(`Aカード対象 ${name} のページ内位置${idx}が6bitを超える`);
+      value |= BigInt(page1 ? 1 : 0) << BigInt(2 + i);
+      value |= BigInt(idx) << BigInt(6 + 6 * i);
     });
-    const len = aceCards.length === 1 ? 1 : 2;
+    const len = aceCards.length === 1 ? 2 : 3;
+    aceBytes = [];
     for (let i = 0; i < len; i++) {
       aceBytes.push(Number((value >> BigInt(8 * i)) & 0xffn));
     }
