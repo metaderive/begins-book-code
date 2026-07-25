@@ -61,6 +61,32 @@ describe("decode", () => {
   });
 });
 
+describe("ページ境界（0xff↔0x100）", () => {
+  // BP1/BP2 は実機（Switch 2）で往復確認済みの40枚ブック
+  it("BP1: 同一バイト0x00が page0=ジャイアントラット / page1=コラプション に割れる", () => {
+    const book = decode(
+      "oCcg AQAA AQ&D BAUG BwgJ CgsM DQ4P EBES ExQV FhcZ Ghsc HR4f &CEi &yQ@ JicA",
+    );
+    expect(book.cards).toHaveLength(40);
+    const p0 = book.cards.find((c) => c.id === 0x00 && c.page === 0);
+    const p1 = book.cards.find((c) => c.id === 0x00 && c.page === 1);
+    expect(p0).toMatchObject({ trueId: 0x000, name: "ジャイアントラット" });
+    expect(p1).toMatchObject({ trueId: 0x100, name: "コラプション" });
+  });
+
+  it("BP2: 境界を跨ぐ連続カード（0xfe,0xff | 0x100,0x101）が正しく振り分く", () => {
+    const book = decode(
+      "oCYg AgD+ /wEC AwQF Bgc& CQoL DA#? DxAR EhMU FRYX GRob HB#e HyAh &iMk JQAB",
+    );
+    expect(book.cards).toHaveLength(40);
+    const name = (trueId: number) => book.cards.find((c) => c.trueId === trueId)?.name;
+    expect(name(0x0fe)).toBe("グロースボディ"); // page0 末尾
+    expect(name(0x0ff)).toBe("ゴブリンズレア"); // page0 最終
+    expect(name(0x100)).toBe("コラプション"); // page1 先頭
+    expect(name(0x101)).toBe("サイレンス"); // page1
+  });
+});
+
 describe("encodeHeader", () => {
   it("既知ヘッダーを再現する", () => {
     const cases: Array<[Record<number, [number, number]>, string]> = [
