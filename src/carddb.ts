@@ -28,6 +28,7 @@ export const CARD_DB: ReadonlyMap<string, CardInfo> = new Map([
   ["クレリック", { id: 0x05, sortNo: 19 }],
   ["トロージャンホース", { id: 0x12, sortNo: 20 }],
   ["サムライ", { id: 0x09, sortNo: 21 }],
+  ["アーチビショップ", { id: 0x01, sortNo: 22 }],
   ["ニンジャ", { id: 0x13, sortNo: 23 }],
   ["バトルギアα", { id: 0x14, sortNo: 24 }],
   ["バトルギアβ", { id: 0x15, sortNo: 25 }],
