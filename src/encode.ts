@@ -11,7 +11,8 @@ export interface BookCard {
 /**
  * ブック定義からコードを生成する。
  * cards: 合計40枚・枚数1〜4。aceCards: A（エース）カードのカード名（A1,A2,A3の順、最大3つ）。
- * 並びは正準形（枚数クラス昇順 → グループ内はページ0→ページ1、各カタログ順）で出力する。
+ * 並びは本ライブラリの既定順（枚数クラス昇順 → グループ内はページ0→ページ1、各 basicSortNo 順）
+ * で出力する。この順は"正しい並び"ではなく、採用したカード一覧に基づく決め打ちの一定順。
  */
 export function encodeBook(cards: readonly BookCard[], aceCards: readonly string[] = []): string {
   const total = cards.reduce((s, c) => s + c.count, 0);
@@ -32,7 +33,7 @@ export function encodeBook(cards: readonly BookCard[], aceCards: readonly string
   }
   const header = encodeHeader(hist as Histogram);
 
-  // ID列 = [ページ0: クラス昇順][ページ1: クラス昇順]、各カタログ順
+  // ID列 = [ページ0: クラス昇順][ページ1: クラス昇順]、各 basicSortNo 順（既定の並び）
   const stream: typeof entries = [];
   for (const page1 of [false, true]) {
     for (const count of [1, 2, 3, 4]) {

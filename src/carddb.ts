@@ -1,4 +1,4 @@
-/** エンコード用カードDB: 名前 → { バイトID, カタログ順(basicSortNo), ページ1か } */
+/** エンコード用カードDB: 名前 → { バイトID, 並び順キー(basicSortNo), ページ1か } */
 export interface CardInfo {
   id: number;
   sortNo: number;
