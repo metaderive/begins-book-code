@@ -41,7 +41,8 @@ describe("実機ゴールデン（ヘッダー page0 先頭ビット＝ページ
   // 実機（Switch 2）でエクスポートした本物のブックコード。
   // 14種40枚: 全て page0、×4 を1枚も使わない。×3 を13種（各×3＝39枚）＋ ミノタウロス ×1。
   // ヒストグラム {1:[1,0], 3:[13,0]}。page1 が空（ページ1セクションが続かない）→ 先頭バイト `60`（MSB=0）。
-  // 実機13本中、先頭ビット 0 はこの1本だけ（他12本は全て page1 あり）。
+  // 2026-09-11 時点の実機13本中、先頭ビット 0 はこの1本だけだった（他12本は全て page1 あり）。
+  // 2026-09-12 の実機エクスポート `40 a0`（{4:[10,0]}）・`14`（{2:[20,0]}）で 0 の例が 3 本になった（下記）。
   // beta.1 は先頭を定数1（`e0`）で出し、かつ decoder が先頭0を弾いていた。
   const REAL_CODE = "YAEN AD4H AxkA DBY? Cwob Bhct";
   // 60 01 0d | 00 | 3e 07 03 19 00 0c 16 0e 0b 0a 1b 06 17 2d
@@ -125,8 +126,87 @@ describe("実機ゴールデン（ヘッダー page0 先頭ビット＝ページ
   });
 });
 
-describe("実機ヘッダー回帰（既知10本 + 新規3本をバイト一致）", () => {
-  // 出典: docs/book_code_format.md（S1/S8/S18..S24 等の実機採取ヘッダー）＋ 新規実機サンプル3本。
+describe("実機ゴールデン（ページ1 なし・page0 は ×4 のみ＝先頭ビット 0・ヘッダー 2B）", () => {
+  // 2026-09-12 実機（Switch 2）エクスポート。beta.3 の encodeBook が出した自作コードを実機に取り込み
+  // （内容一致）、実機からエクスポートし直したもの＝実機自身の出力。自作コードとバイト完全一致した。
+  // 10種40枚: 全て page0・全て ×4。ヒストグラム {4:[10,0]}。
+  // 「ページ1 が空で page0 に ×4 がある／×3 が無い」構成＝これまで実機サンプルが無く、現行規則
+  // （ページ1 なし→先頭 0）と beta.2 の旧規則（×3 のみでなければ 1）が食い違う唯一の構成だった。
+  // 実機は先頭 `40`（MSB=0）を出し、現行規則で確定。
+  const REAL_CODE = "QKAA BwMZ AAwW Dg&L Cg==";
+  // 40 a0 | 00 | 07 03 19 00 0c 16 0e 02 0b 0a
+  const REAL_BYTES = "40a0" + "00" + "070319000c160e020b0a";
+
+  const book = ["ゴブリン", "ウルフ", "ファイター", "ジャイアントラット", "スタチュー", "バルダンダース",
+    "ゾンビ", "アンバーモス", "シーフ", "スケルトン"].map((name) => ({ name, count: 4 }));
+
+  it("encodeBook が実機エクスポートとバイト完全一致する（先頭 40・ヘッダー 2B）", () => {
+    expect(hex(encodeBook(book))).toBe(hex(REAL_CODE));
+    expect(hexU8(codeToBytes(encodeBook(book)))).toBe(REAL_BYTES);
+  });
+
+  it("decode(実機コード) が {4:[10,0]}・10種・正しいID列に復元する（先頭ビット0＝ページ1なし）", () => {
+    const d = decode(REAL_CODE);
+    expect(d.header.histogram).toEqual({ 4: [10, 0] });
+    expect(d.header.bytes.length).toBe(2);
+    expect(d.aceCards).toEqual([]);
+    expect(d.cards).toHaveLength(10);
+    expect(d.cards.every((c) => c.page === 0)).toBe(true);
+    expect(d.cards.map((c) => c.id)).toEqual([0x07, 0x03, 0x19, 0x00, 0x0c, 0x16, 0x0e, 0x02, 0x0b, 0x0a]);
+    expect(d.cards.map((c) => c.name)).toEqual(["ゴブリン", "ウルフ", "ファイター", "ジャイアントラット",
+      "スタチュー", "バルダンダース", "ゾンビ", "アンバーモス", "スケルトン", "シーフ"]);
+  });
+});
+
+describe("実機ゴールデン（ページ1 なし・page0 は ×2 のみ＝ヘッダー 1B）", () => {
+  // 2026-09-12 実機（Switch 2）エクスポート。beta.3 の encodeBook が出した自作コード OWN_CODE を
+  // 実機に取り込み（成功）、実機からエクスポートし直したもの＝実機自身の出力。
+  // 20種40枚: 全て page0・全て ×2。ヒストグラム {2:[20,0]}。
+  // ヘッダーは 1B `14`（先頭 0・H=0・×1 なし・n2=20）＝ページ1セクションが無い最短ヘッダー。
+  // ヘッダー `14` と Aカード `00` は自作と同一、ID の多重集合も同一。ID 列の並びだけが違う
+  // （実機順 = 自作順の 1 枚目 ＋ 2〜18 枚目の逆順 ＋ 19・20 枚目）。並びは実機の内部レイアウト
+  // （生成規則は未解明）の観測値であり、取り込み可否には影響しない。ここでは並びを比較しない。
+  const REAL_CODE = "FAAH EQ8& EwEJ EgUG DQoL Ag4M AAME EA==";
+  // 14 | 00 | 07 11 0f 08 13 01 09 12 05 06 0d 0a 0b 02 0e 0c 00 03 04 10
+  const REAL_BYTES = "14" + "00" + "07110f08130109120506" + "0d0a0b020e0c00030410";
+  const OWN_CODE = "FAAH AwAM Dg&L Cg#G BR&J ARM& DxEE EA==";
+  // 14 | 00 | 07 03 00 0c 0e 02 0b 0a 0d 06 05 12 09 01 13 08 0f 11 04 10
+  const OWN_BYTES = "14" + "00" + "0703000c0e020b0a0d06" + "0512090113080f110410";
+
+  const book = ["ジャイアントラット", "アーチビショップ", "アンバーモス", "ウルフ", "グレートフォシル",
+    "クレリック", "ゴールドトーテム", "ゴブリン", "コロッサス", "サムライ", "シーフ", "スケルトン",
+    "スタチュー", "スチームギア", "ゾンビ", "ティラノサウルス", "デコイ", "ドッペルゲンガー",
+    "トロージャンホース", "ニンジャ"].map((name) => ({ name, count: 2 }));
+
+  it("encodeHeader({2:[20,0]}) が 1B `14` を出し、encodeBook は実機取り込み成功済みの自作コードと一致する", () => {
+    expect(hexU8(encodeHeader({ 2: [20, 0] }))).toBe("14");
+    expect(hex(encodeBook(book))).toBe(hex(OWN_CODE));
+    expect(hexU8(codeToBytes(encodeBook(book)))).toBe(OWN_BYTES);
+    expect(hex(REAL_CODE)).toBe(REAL_BYTES);
+    // ヘッダー `14` ＋ Aカード `00` は実機エクスポートと自作で同一
+    expect(hex(REAL_CODE).slice(0, 4)).toBe(hex(OWN_CODE).slice(0, 4));
+  });
+
+  it("decode(実機コード) が {2:[20,0]}・20種で、ID 集合が encodeBook の decode と一致する（並びは比較しない）", () => {
+    const d = decode(REAL_CODE);
+    expect(d.header.histogram).toEqual({ 2: [20, 0] });
+    expect(d.header.bytes.length).toBe(1);
+    expect(d.aceCards).toEqual([]);
+    expect(d.cards).toHaveLength(20);
+    expect(d.cards.every((c) => c.page === 0)).toBe(true);
+    expect(d.cards.map((c) => c.id)).toEqual([
+      0x07, 0x11, 0x0f, 0x08, 0x13, 0x01, 0x09, 0x12, 0x05, 0x06,
+      0x0d, 0x0a, 0x0b, 0x02, 0x0e, 0x0c, 0x00, 0x03, 0x04, 0x10,
+    ]);
+    const own = decode(encodeBook(book));
+    const sortedIds = (x: ReturnType<typeof decode>) => x.cards.map((c) => c.id).sort((a, b) => a - b);
+    expect(sortedIds(d)).toEqual(sortedIds(own));
+    expect(new Set(d.cards.map((c) => c.name))).toEqual(new Set(book.map((c) => c.name)));
+  });
+});
+
+describe("実機ヘッダー回帰（既知10本 + 新規5本をバイト一致）", () => {
+  // 出典: docs/book_code_format.md（S1/S8/S18..S24 等の実機採取ヘッダー）＋ 新規実機サンプル5本。
   const cases: Array<[Histogram, string]> = [
     [{ 4: [9, 1] }, "c0904010"],
     [{ 2: [19, 1] }, "9301"],
@@ -141,6 +221,8 @@ describe("実機ヘッダー回帰（既知10本 + 新規3本をバイト一致�
     [{ 1: [1, 0], 3: [0, 1], 4: [9, 0] }, "e0019040 01".replace(/\s/g, "")], // NEWp1 実機サンプル
     [{ 1: [1, 0], 3: [13, 0] }, "60010d"], // NEWp0 実機サンプル（page1 なし・先頭 60）
     [{ 1: [16, 10], 2: [3, 1], 3: [1, 1] }, "e31001610a01"], // 2026-09-12 実機受理（page0 ×3のみでも page1 ありなら先頭 e3）
+    [{ 4: [10, 0] }, "40a0"], // 2026-09-12 実機エクスポート（page1 なし・page0 は ×4 のみ → 先頭 40）
+    [{ 2: [20, 0] }, "14"], // 2026-09-12 実機エクスポート（page1 なし・×1 なし・H なし → 1B ヘッダー）
   ];
 
   for (const [hist, want] of cases) {
